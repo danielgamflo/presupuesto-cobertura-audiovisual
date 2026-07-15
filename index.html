@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Calculadora de Presupuesto — Cobertura Audiovisual</title>
+<style>
+:root{
+  --navy:#1F2937; --accent:#7C3AED; --accent-dark:#5B21B6; --light:#F3F0FA;
+  --bg:#F8F7FB; --card:#FFFFFF; --border:#E4E1EC; --text:#1F2937; --muted:#6B7280;
+  --green:#0F6E56; --green-bg:#E1F5EE;
+}
+*{box-sizing:border-box;}
+body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;background:var(--bg);color:var(--text);}
+.wrap{max-width:1000px;margin:0 auto;padding:24px 20px 80px;}
+h1{font-size:22px;margin:0 0 4px;color:var(--navy);}
+.subtitle{color:var(--muted);font-size:13px;margin:0 0 24px;}
+.card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;margin-bottom:18px;}
+.card h2{font-size:15px;margin:0 0 14px;color:var(--accent);display:flex;align-items:center;gap:8px;cursor:pointer;user-select:none;}
+.card h2 .chev{font-size:12px;transition:transform .15s;margin-left:auto;color:var(--muted);}
+.card.collapsed .chev{transform:rotate(-90deg);}
+.card .body{display:block;}
+.card.collapsed .body{display:none;}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+.grid4{display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:10px;}
+label{display:block;font-size:11.5px;color:var(--muted);margin-bottom:4px;}
+input[type=text],input[type=number],select,input[type=date]{
+  width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:7px;font-size:13.5px;
+  background:#fff;color:var(--text);
+}
+input[type=number]{text-align:right;}
+.field{margin-bottom:10px;}
+table{width:100%;border-collapse:collapse;font-size:13px;}
+th{text-align:left;font-size:11px;color:var(--muted);font-weight:600;padding:6px 8px;border-bottom:1px solid var(--border);}
+td{padding:6px 8px;border-bottom:1px solid #F0EEF6;vertical-align:middle;}
+td input,td select{padding:6px 8px;font-size:13px;}
+.row-total{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap;}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:7px;border:1px solid var(--border);
+  background:#fff;color:var(--text);font-size:13px;cursor:pointer;}
+.btn:hover{background:var(--light);}
+.btn-accent{background:var(--accent);color:#fff;border-color:var(--accent);}
+.btn-accent:hover{background:var(--accent-dark);}
+.btn-ghost{border:none;background:none;color:var(--muted);padding:4px 8px;}
+.btn-ghost:hover{color:#B91C1C;}
+.btn-add{margin-top:8px;font-size:12.5px;padding:6px 12px;}
+.pill-row{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;}
+.pill{padding:7px 14px;border-radius:20px;border:1px solid var(--border);background:#fff;font-size:12.5px;cursor:pointer;}
+.pill:hover{border-color:var(--accent);color:var(--accent);}
+.totals{display:grid;grid-template-columns:1fr auto;gap:6px 20px;font-size:14px;padding:4px 0;}
+.totals .lbl{color:var(--muted);}
+.totals .val{text-align:right;font-variant-numeric:tabular-nums;}
+.totals .big{font-size:20px;font-weight:600;color:var(--navy);}
+.totals .big .lbl{font-size:14px;font-weight:400;}
+.divider{border:none;border-top:1px solid var(--border);margin:10px 0;}
+.reparto-card{background:var(--light);border-radius:8px;padding:12px 14px;margin-top:6px;}
+.reparto-row{display:flex;justify-content:space-between;font-size:13px;padding:4px 0;}
+.reparto-row b{color:var(--navy);}
+.actions{display:flex;gap:10px;margin-top:22px;flex-wrap:wrap;}
+.badge{display:inline-block;font-size:10.5px;padding:2px 8px;border-radius:10px;background:var(--green-bg);color:var(--green);margin-left:8px;}
+.hint{font-size:11.5px;color:var(--muted);margin-top:2px;}
+#printArea{display:none;}
+@media print{
+  body *{visibility:hidden;}
+  #printArea, #printArea *{visibility:visible;}
+  #printArea{display:block;position:absolute;top:0;left:0;width:100%;padding:30px;}
+}
+.pv-header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:24px;border-bottom:2px solid var(--accent);padding-bottom:16px;}
+.pv-header h1{margin:0;font-size:20px;}
+.pv-table{width:100%;border-collapse:collapse;margin-bottom:16px;}
+.pv-table th{background:var(--navy);color:#fff;padding:8px 10px;font-size:12px;text-align:left;}
+.pv-table td{padding:8px 10px;border-bottom:1px solid #eee;font-size:13px;}
+.pv-total-row{font-size:16px;font-weight:600;background:var(--light);}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Calculadora de presupuesto</h1>
+  <p class="subtitle">Cobertura audiovisual de eventos corporativos — Danny &amp; Reiner</p>
+
+  <div class="card">
+    <h2 onclick="toggleCard(this)">Datos del proyecto <span class="chev">▾</span></h2>
+    <div class="body">
+      <div class="grid2">
+        <div class="field"><label>Cliente</label><input type="text" id="f_cliente" placeholder="Nombre de la empresa"></div>
+        <div class="field"><label>Tipo de empresa / cliente</label>
+          <select id="f_tipoEmpresa" onchange="onTipoEmpresaChange()">
+            <option value="pyme">PYME</option>
+            <option value="corp_mediano" selected>Corporativo mediano</option>
+            <option value="corp_grande">Corporativo grande / marca</option>
+          </select>
+        </div>
+        <div class="field"><label>Tipo de proyecto / evento</label>
+          <select id="f_tipoProyecto">
+            <option>Evento corporativo general</option>
+            <option>Activación de marca</option>
+            <option>Social room</option>
+            <option>Fin de año</option>
+            <option>Ceremonia de licenciatura</option>
+            <option>Otro</option>
+          </select>
+        </div>
+        <div class="field"><label>Fecha del evento</label><input type="date" id="f_fecha"></div>
+        <div class="field"><label>N° de cotización</label><input type="text" id="f_cotizacion" placeholder="COT-001"></div>
+        <div class="field"><label>Ubicación</label><input type="text" id="f_ubicacion" placeholder="Santiago, Las Condes..."></div>
+      </div>
+      <div class="pill-row" id="pkgPills"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 onclick="toggleCard(this)">Configuración de tarifas <span class="chev">▾</span></h2>
+    <div class="body">
+      <p class="hint">Estos valores alimentan los cálculos de todo el formulario. Se guardan en este navegador.</p>
+      <div id="ratesEditor"></div>
+      <div class="grid2" style="margin-top:14px;">
+        <div class="field"><label>% imprevistos por defecto</label><input type="number" id="r_imprevistos" step="0.5"></div>
+        <div class="field"><label>% margen utilidad de sociedad por defecto</label><input type="number" id="r_margen" step="0.5"></div>
+        <div class="field"><label>% reparto utilidad — Danny</label><input type="number" id="r_repartoDanny" step="1"></div>
+        <div class="field"><label>% reparto utilidad — Reiner</label><input type="number" id="r_repartoReiner" step="1"></div>
+      </div>
+      <button class="btn btn-add" onclick="saveRatesFromEditor()">Guardar configuración</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 onclick="toggleCard(this)">Bloque 1 — Roles en terreno <span class="chev">▾</span></h2>
+    <div class="body">
+      <table id="tableRoles"><thead><tr>
+        <th style="width:26%">Rol</th><th style="width:16%">Ejecutado por</th><th style="width:14%">Unidad</th>
+        <th style="width:12%">Cantidad</th><th style="width:16%">Tarifa</th><th style="width:14%">Subtotal</th><th></th>
+      </tr></thead><tbody></tbody></table>
+      <button class="btn btn-add" onclick="addRow('roles')">+ agregar rol</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 onclick="toggleCard(this)">Bloque 2 — Post-producción <span class="chev">▾</span></h2>
+    <div class="body">
+      <table id="tablePost"><thead><tr>
+        <th style="width:26%">Entregable</th><th style="width:16%">Ejecutado por</th><th style="width:14%">Unidad</th>
+        <th style="width:12%">Cantidad</th><th style="width:16%">Tarifa</th><th style="width:14%">Subtotal</th><th></th>
+      </tr></thead><tbody></tbody></table>
+      <button class="btn btn-add" onclick="addRow('post')">+ agregar entregable</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 onclick="toggleCard(this)">Bloque 3 — Costos operativos <span class="chev">▾</span></h2>
+    <div class="body">
+      <table id="tableCostos"><thead><tr>
+        <th style="width:34%">Concepto</th><th style="width:16%">Unidad</th>
+        <th style="width:14%">Cantidad</th><th style="width:18%">Costo unitario</th><th style="width:14%">Subtotal</th><th></th>
+      </tr></thead><tbody></tbody></table>
+      <button class="btn btn-add" onclick="addRow('costos')">+ agregar costo</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 onclick="toggleCard(this)">Resumen y total <span class="chev">▾</span></h2>
+    <div class="body">
+      <div class="grid2">
+        <div class="field"><label>% imprevistos (sobre bloques 1-3)</label><input type="number" id="pctImprevistos" step="0.5" onchange="recalc()"></div>
+        <div class="field"><label>% margen utilidad de sociedad</label><input type="number" id="pctMargen" step="0.5" onchange="recalc()"></div>
+      </div>
+      <hr class="divider">
+      <div class="totals">
+        <div class="lbl">Subtotal Bloque 1 — Roles en terreno</div><div class="val" id="t_b1">$0</div>
+        <div class="lbl">Subtotal Bloque 2 — Post-producción</div><div class="val" id="t_b2">$0</div>
+        <div class="lbl">Subtotal Bloque 3 — Costos operativos</div><div class="val" id="t_b3">$0</div>
+        <div class="lbl">Bloque 4 — Imprevistos</div><div class="val" id="t_b4">$0</div>
+        <div class="lbl">Bloque 5 — Margen utilidad de sociedad</div><div class="val" id="t_b5">$0</div>
+      </div>
+      <hr class="divider">
+      <div class="totals">
+        <div class="lbl">Total neto</div><div class="val" id="t_neto">$0</div>
+        <div class="lbl">IVA (19%)</div><div class="val" id="t_iva">$0</div>
+        <div class="big"><div class="lbl">Total a facturar</div></div><div class="val big" id="t_total">$0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2 onclick="toggleCard(this)">Reparto de ingresos <span class="chev">▾</span></h2>
+    <div class="body">
+      <div class="reparto-card">
+        <div class="reparto-row"><span>Danny — pago por rol + <span id="pctD">50</span>% utilidad</span><b id="rep_danny">$0</b></div>
+        <div class="reparto-row"><span>Reiner — pago por rol + <span id="pctR">50</span>% utilidad</span><b id="rep_reiner">$0</b></div>
+        <div class="reparto-row"><span>Colaboradores externos — pago por rol</span><b id="rep_externo">$0</b></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="actions">
+    <button class="btn btn-accent" onclick="generarCotizacion()">Generar hoja de presupuesto para el cliente</button>
+    <button class="btn" onclick="resetForm()">Limpiar formulario</button>
+  </div>
+</div>
+
+<div id="printArea"></div>
+
+<script>
+const STORAGE_KEY = 'cobertura_av_rates_v1';
+
+const defaultRates = {
+  roles: [
+    {id:'fotografo', label:'Fotógrafo', jornada:380000, media:200000, hora:35000},
+    {id:'videografo', label:'Videógrafo / camarógrafo', jornada:420000, media:220000, hora:40000},
+    {id:'dron', label:'Operador de dron', jornada:220000, media:150000, hora:0},
+    {id:'contenido', label:'Creador de contenido en tiempo real', jornada:320000, media:180000, hora:30000},
+    {id:'asistente', label:'Asistente de cámara / producción', jornada:120000, media:70000, hora:15000},
+    {id:'direccion', label:'Dirección creativa / producción', jornada:250000, media:150000, hora:0}
+  ],
+  entregables: [
+    {id:'edicion_hora', label:'Edición de video (hora)', tarifa:18000},
+    {id:'reel', label:'Reel / short para redes', tarifa:45000},
+    {id:'resumen', label:'Video resumen (2-3 min)', tarifa:280000},
+    {id:'aftermovie', label:'Aftermovie narrativo (3-5 min)', tarifa:500000},
+    {id:'foto_unidad', label:'Edición de fotografía (por foto)', tarifa:2000},
+    {id:'foto_jornada', label:'Edición de fotografía (jornada)', tarifa:180000},
+    {id:'express', label:'Entrega express (recargo)', tarifa:0}
+  ],
+  costos: [
+    {id:'traslado', label:'Traslado', unidad:'viaje', costo:0},
+    {id:'catering', label:'Alimentación / catering', unidad:'persona', costo:0},
+    {id:'alojamiento', label:'Alojamiento / estadía', unidad:'noche', costo:0},
+    {id:'equipo_ext', label:'Arriendo de equipo externo', unidad:'ítem', costo:0},
+    {id:'equipo_camara', label:'Arriendo equipo propio — cámara + lentes (FX30)', unidad:'jornada', costo:80000},
+    {id:'equipo_dron', label:'Arriendo equipo propio — dron DJI Air 2S', unidad:'jornada', costo:50000}
+  ],
+  imprevistos: 6,
+  margen: 18,
+  repartoDanny: 50,
+  repartoReiner: 50,
+  margenPorTipoEmpresa: { pyme: 15, corp_mediano: 18, corp_grande: 22 }
+};
+
+const paquetes = {
+  foto: {label:'Paquete Foto', roles:[{roleId:'fotografo', unidad:'jornada', cant:1, persona:'Reiner'}], post:[{id:'foto_jornada', cant:1, persona:'Danny'}]},
+  video: {label:'Paquete Video', roles:[{roleId:'videografo', unidad:'jornada', cant:1, persona:'Reiner'}], post:[{id:'resumen', cant:1, persona:'Danny'}]},
+  mixto: {label:'Paquete Mixto', roles:[{roleId:'fotografo', unidad:'jornada', cant:1, persona:'Reiner'},{roleId:'videografo', unidad:'jornada', cant:1, persona:'Danny'}], post:[{id:'resumen', cant:1, persona:'Danny'},{id:'foto_jornada', cant:1, persona:'Danny'}]},
+  redes: {label:'Redes en Vivo', roles:[{roleId:'contenido', unidad:'jornada', cant:1, persona:'Reiner'}], post:[]},
+  aftermovie: {label:'Aftermovie', roles:[{roleId:'videografo', unidad:'jornada', cant:1, persona:'Reiner'}], post:[{id:'aftermovie', cant:1, persona:'Danny'}]}
+};
+
+let RATES = loadRates();
+let state = { roles: [], post: [], costos: [] };
+
+function loadRates(){
+  try{
+    const saved = JSON.parse(localStorage.getItem(STORAGE_KEY));
+    if(saved) return saved;
+  }catch(e){}
+  return JSON.parse(JSON.stringify(defaultRates));
+}
+function saveRates(){ localStorage.setItem(STORAGE_KEY, JSON.stringify(RATES)); }
+function fmt(n){ n = Math.round(n||0); return '$' + n.toLocaleString('es-CL'); }
+
+function toggleCard(h2){ h2.parentElement.classList.toggle('collapsed'); }
+
+function renderPkgPills(){
+  const el = document.getElementById('pkgPills');
+  el.innerHTML = Object.keys(paquetes).map(k =>
+    `<div class="pill" onclick="loadPaquete('${k}')">${paquetes[k].label}</div>`
+  ).join('') + `<div class="pill" onclick="clearBlocks()">Limpiar servicios</div>`;
+}
+
+function clearBlocks(){ state.roles=[]; state.post=[]; render(); }
+
+function loadPaquete(key){
+  const p = paquetes[key];
+  state.roles = p.roles.map(r=>{
+    const rd = RATES.roles.find(x=>x.id===r.roleId);
+    return { roleId:r.roleId, persona:r.persona, unidad:r.unidad, cantidad:r.cant, tarifa: rd[r.unidad] || rd.jornada };
+  });
+  state.post = p.post.map(x=>{
+    const ed = RATES.entregables.find(e=>e.id===x.id);
+    return { entId:x.id, persona:x.persona, cantidad:x.cant, tarifa: ed.tarifa };
+  });
+  render();
+}
+
+function onTipoEmpresaChange(){
+  const tipo = document.getElementById('f_tipoEmpresa').value;
+  const m = RATES.margenPorTipoEmpresa[tipo];
+  if(m !== undefined){ document.getElementById('pctMargen').value = m; recalc(); }
+}
+
+function addRow(block){
+  if(block==='roles') state.roles.push({roleId: RATES.roles[0].id, persona:'', unidad:'jornada', cantidad:0, tarifa: RATES.roles[0].jornada});
+  if(block==='post') state.post.push({entId: RATES.entregables[0].id, persona:'', cantidad:0, tarifa: RATES.entregables[0].tarifa});
+  if(block==='costos') state.costos.push({costoId: RATES.costos[0].id, cantidad:0, tarifa: RATES.costos[0].costo});
+  render();
+}
+function removeRow(block, idx){ state[block].splice(idx,1); render(); }
+
+function unitRateFor(role, unidad){
+  if(unidad==='jornada') return role.jornada;
+  if(unidad==='media jornada') return role.media;
+  if(unidad==='hora') return role.hora;
+  return role.jornada;
+}
+
+function render(){
+  renderRolesTable();
+  renderPostTable();
+  renderCostosTable();
+  recalc();
+}
+
+function renderRolesTable(){
+  const tbody = document.querySelector('#tableRoles tbody');
+  tbody.innerHTML = state.roles.map((row, i) => {
+    const roleOptions = RATES.roles.map(r=>`<option value="${r.id}" ${r.id===row.roleId?'selected':''}>${r.label}</option>`).join('');
+    return `<tr>
+      <td><select onchange="updateRole(${i}, this.value)">${roleOptions}</select></td>
+      <td><select onchange="state.roles[${i}].persona=this.value">
+        <option value="" ${row.persona===''?'selected':''}>—</option>
+        <option value="Danny" ${row.persona==='Danny'?'selected':''}>Danny</option>
+        <option value="Reiner" ${row.persona==='Reiner'?'selected':''}>Reiner</option>
+        <option value="Externo" ${row.persona==='Externo'?'selected':''}>Externo</option>
+      </select></td>
+      <td><select onchange="updateUnidad(${i}, this.value)">
+        <option value="jornada" ${row.unidad==='jornada'?'selected':''}>jornada</option>
+        <option value="media jornada" ${row.unidad==='media jornada'?'selected':''}>media jornada</option>
+        <option value="hora" ${row.unidad==='hora'?'selected':''}>hora</option>
+      </select></td>
+      <td><input type="number" value="${row.cantidad}" min="0" step="0.5" onchange="state.roles[${i}].cantidad=parseFloat(this.value)||0;recalc()"></td>
+      <td><input type="number" value="${row.tarifa}" min="0" step="1000" onchange="state.roles[${i}].tarifa=parseFloat(this.value)||0;recalc()"></td>
+      <td class="row-total">${fmt(row.cantidad*row.tarifa)}</td>
+      <td><button class="btn-ghost" onclick="removeRow('roles',${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+function updateRole(i, roleId){
+  const role = RATES.roles.find(r=>r.id===roleId);
+  state.roles[i].roleId = roleId;
+  state.roles[i].tarifa = unitRateFor(role, state.roles[i].unidad);
+  render();
+}
+function updateUnidad(i, unidad){
+  const role = RATES.roles.find(r=>r.id===state.roles[i].roleId);
+  state.roles[i].unidad = unidad;
+  state.roles[i].tarifa = unitRateFor(role, unidad);
+  render();
+}
+
+function renderPostTable(){
+  const tbody = document.querySelector('#tablePost tbody');
+  tbody.innerHTML = state.post.map((row, i) => {
+    const opts = RATES.entregables.map(e=>`<option value="${e.id}" ${e.id===row.entId?'selected':''}>${e.label}</option>`).join('');
+    return `<tr>
+      <td><select onchange="updatePost(${i}, this.value)">${opts}</select></td>
+      <td><select onchange="state.post[${i}].persona=this.value">
+        <option value="" ${row.persona===''?'selected':''}>—</option>
+        <option value="Danny" ${row.persona==='Danny'?'selected':''}>Danny</option>
+        <option value="Reiner" ${row.persona==='Reiner'?'selected':''}>Reiner</option>
+        <option value="Externo" ${row.persona==='Externo'?'selected':''}>Externo</option>
+      </select></td>
+      <td style="color:var(--muted);font-size:12px;">pieza / hora</td>
+      <td><input type="number" value="${row.cantidad}" min="0" step="1" onchange="state.post[${i}].cantidad=parseFloat(this.value)||0;recalc()"></td>
+      <td><input type="number" value="${row.tarifa}" min="0" step="1000" onchange="state.post[${i}].tarifa=parseFloat(this.value)||0;recalc()"></td>
+      <td class="row-total">${fmt(row.cantidad*row.tarifa)}</td>
+      <td><button class="btn-ghost" onclick="removeRow('post',${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+function updatePost(i, entId){
+  const ent = RATES.entregables.find(e=>e.id===entId);
+  state.post[i].entId = entId;
+  state.post[i].tarifa = ent.tarifa;
+  render();
+}
+
+function renderCostosTable(){
+  const tbody = document.querySelector('#tableCostos tbody');
+  tbody.innerHTML = state.costos.map((row, i) => {
+    const opts = RATES.costos.map(c=>`<option value="${c.id}" ${c.id===row.costoId?'selected':''}>${c.label}</option>`).join('');
+    return `<tr>
+      <td><select onchange="updateCosto(${i}, this.value)">${opts}</select></td>
+      <td id="cu_${i}" style="color:var(--muted);font-size:12px;">${RATES.costos.find(c=>c.id===row.costoId).unidad}</td>
+      <td><input type="number" value="${row.cantidad}" min="0" step="1" onchange="state.costos[${i}].cantidad=parseFloat(this.value)||0;recalc()"></td>
+      <td><input type="number" value="${row.tarifa}" min="0" step="1000" onchange="state.costos[${i}].tarifa=parseFloat(this.value)||0;recalc()"></td>
+      <td class="row-total">${fmt(row.cantidad*row.tarifa)}</td>
+      <td><button class="btn-ghost" onclick="removeRow('costos',${i})">✕</button></td>
+    </tr>`;
+  }).join('');
+}
+function updateCosto(i, costoId){
+  const c = RATES.costos.find(x=>x.id===costoId);
+  state.costos[i].costoId = costoId;
+  state.costos[i].tarifa = c.costo;
+  render();
+}
+
+function sumBlock(rows){ return rows.reduce((s,r)=>s + (r.cantidad*r.tarifa), 0); }
+
+function recalc(){
+  const b1 = sumBlock(state.roles);
+  const b2 = sumBlock(state.post);
+  const b3 = sumBlock(state.costos);
+  const pctImp = parseFloat(document.getElementById('pctImprevistos').value)/100 || 0;
+  const pctMar = parseFloat(document.getElementById('pctMargen').value)/100 || 0;
+  const b4 = pctImp * (b1+b2+b3);
+  const b5 = pctMar * (b1+b2+b3+b4);
+  const neto = b1+b2+b3+b4+b5;
+  const iva = neto*0.19;
+  const total = neto+iva;
+
+  document.getElementById('t_b1').textContent = fmt(b1);
+  document.getElementById('t_b2').textContent = fmt(b2);
+  document.getElementById('t_b3').textContent = fmt(b3);
+  document.getElementById('t_b4').textContent = fmt(b4);
+  document.getElementById('t_b5').textContent = fmt(b5);
+  document.getElementById('t_neto').textContent = fmt(neto);
+  document.getElementById('t_iva').textContent = fmt(iva);
+  document.getElementById('t_total').textContent = fmt(total);
+
+  const pagoDanny = state.roles.filter(r=>r.persona==='Danny').reduce((s,r)=>s+r.cantidad*r.tarifa,0)
+                   + state.post.filter(r=>r.persona==='Danny').reduce((s,r)=>s+r.cantidad*r.tarifa,0);
+  const pagoReiner = state.roles.filter(r=>r.persona==='Reiner').reduce((s,r)=>s+r.cantidad*r.tarifa,0)
+                    + state.post.filter(r=>r.persona==='Reiner').reduce((s,r)=>s+r.cantidad*r.tarifa,0);
+  const pagoExterno = state.roles.filter(r=>r.persona==='Externo').reduce((s,r)=>s+r.cantidad*r.tarifa,0)
+                     + state.post.filter(r=>r.persona==='Externo').reduce((s,r)=>s+r.cantidad*r.tarifa,0);
+
+  const pctD = parseFloat(document.getElementById('r_repartoDanny').value)/100 || 0.5;
+  const pctR = parseFloat(document.getElementById('r_repartoReiner').value)/100 || 0.5;
+  document.getElementById('pctD').textContent = Math.round(pctD*100);
+  document.getElementById('pctR').textContent = Math.round(pctR*100);
+  document.getElementById('rep_danny').textContent = fmt(pagoDanny + b5*pctD);
+  document.getElementById('rep_reiner').textContent = fmt(pagoReiner + b5*pctR);
+  document.getElementById('rep_externo').textContent = fmt(pagoExterno);
+
+  return {b1,b2,b3,b4,b5,neto,iva,total,pagoDanny,pagoReiner,pagoExterno};
+}
+
+function renderRatesEditor(){
+  const el = document.getElementById('ratesEditor');
+  let html = '<div style="font-size:12px;color:var(--muted);margin-bottom:8px;">Roles en terreno ($ por jornada de 8h)</div>';
+  html += RATES.roles.map((r,i)=>`
+    <div class="grid4" style="margin-bottom:6px;">
+      <div style="align-self:center;font-size:13px;">${r.label}</div>
+      <input type="number" value="${r.jornada}" onchange="RATES.roles[${i}].jornada=parseFloat(this.value)||0">
+      <input type="number" value="${r.media}" onchange="RATES.roles[${i}].media=parseFloat(this.value)||0">
+      <input type="number" value="${r.hora}" onchange="RATES.roles[${i}].hora=parseFloat(this.value)||0">
+    </div>`).join('');
+  html += '<div style="font-size:12px;color:var(--muted);margin:14px 0 8px;">Post-producción y entregables ($)</div>';
+  html += RATES.entregables.map((e,i)=>`
+    <div class="grid2" style="margin-bottom:6px;">
+      <div style="align-self:center;font-size:13px;">${e.label}</div>
+      <input type="number" value="${e.tarifa}" onchange="RATES.entregables[${i}].tarifa=parseFloat(this.value)||0">
+    </div>`).join('');
+  el.innerHTML = html;
+}
+
+function saveRatesFromEditor(){
+  RATES.imprevistos = parseFloat(document.getElementById('r_imprevistos').value)||0;
+  RATES.margen = parseFloat(document.getElementById('r_margen').value)||0;
+  RATES.repartoDanny = parseFloat(document.getElementById('r_repartoDanny').value)||50;
+  RATES.repartoReiner = parseFloat(document.getElementById('r_repartoReiner').value)||50;
+  saveRates();
+  document.getElementById('pctImprevistos').value = RATES.imprevistos;
+  document.getElementById('pctMargen').value = RATES.margen;
+  recalc();
+  alert('Configuración guardada en este navegador.');
+}
+
+function initDefaultsToForm(){
+  document.getElementById('pctImprevistos').value = RATES.imprevistos;
+  document.getElementById('pctMargen').value = RATES.margen;
+  document.getElementById('r_imprevistos').value = RATES.imprevistos;
+  document.getElementById('r_margen').value = RATES.margen;
+  document.getElementById('r_repartoDanny').value = RATES.repartoDanny;
+  document.getElementById('r_repartoReiner').value = RATES.repartoReiner;
+}
+
+function resetForm(){
+  if(!confirm('¿Limpiar todos los datos del formulario?')) return;
+  state = {roles:[], post:[], costos:[]};
+  document.getElementById('f_cliente').value='';
+  document.getElementById('f_fecha').value='';
+  document.getElementById('f_cotizacion').value='';
+  document.getElementById('f_ubicacion').value='';
+  render();
+}
+
+function generarCotizacion(){
+  const t = recalc();
+  const cliente = document.getElementById('f_cliente').value || 'Cliente';
+  const tipoProyecto = document.getElementById('f_tipoProyecto').value;
+  const fecha = document.getElementById('f_fecha').value || '—';
+  const cot = document.getElementById('f_cotizacion').value || 'COT-000';
+  const ubicacion = document.getElementById('f_ubicacion').value || '—';
+
+  const filasServicio = [];
+  state.roles.filter(r=>r.cantidad>0).forEach(r=>{
+    const role = RATES.roles.find(x=>x.id===r.roleId);
+    filasServicio.push({desc:`${role.label} — ${r.cantidad} ${r.unidad}(s)`, monto:r.cantidad*r.tarifa});
+  });
+  state.post.filter(r=>r.cantidad>0).forEach(r=>{
+    const ent = RATES.entregables.find(x=>x.id===r.entId);
+    filasServicio.push({desc:`${ent.label} — cantidad ${r.cantidad}`, monto:r.cantidad*r.tarifa});
+  });
+  state.costos.filter(r=>r.cantidad>0).forEach(r=>{
+    const c = RATES.costos.find(x=>x.id===r.costoId);
+    filasServicio.push({desc:`${c.label}`, monto:r.cantidad*r.tarifa});
+  });
+
+  const rowsHtml = filasServicio.map(f=>`<tr><td>${f.desc}</td><td style="text-align:right;">${fmt(f.monto)}</td></tr>`).join('');
+
+  const html = `
+    <div class="pv-header">
+      <div>
+        <h1>Cotización de servicios audiovisuales</h1>
+        <div style="font-size:12px;color:var(--muted);margin-top:4px;">${cot} · ${fecha}</div>
+      </div>
+      <div style="text-align:right;font-size:12px;">
+        <div><b>Cliente:</b> ${cliente}</div>
+        <div><b>Proyecto:</b> ${tipoProyecto}</div>
+        <div><b>Ubicación:</b> ${ubicacion}</div>
+      </div>
+    </div>
+    <table class="pv-table">
+      <thead><tr><th>Servicio incluido</th><th style="text-align:right;">Monto</th></tr></thead>
+      <tbody>${rowsHtml}</tbody>
+      <tfoot>
+        <tr><td>Subtotal neto</td><td style="text-align:right;">${fmt(t.neto)}</td></tr>
+        <tr><td>IVA (19%)</td><td style="text-align:right;">${fmt(t.iva)}</td></tr>
+        <tr class="pv-total-row"><td>Total a facturar</td><td style="text-align:right;">${fmt(t.total)}</td></tr>
+      </tfoot>
+    </table>
+    <p style="font-size:11.5px;color:var(--muted);">Precios expresados en pesos chilenos (CLP), netos + IVA. Cotización válida por 15 días.</p>
+  `;
+  document.getElementById('printArea').innerHTML = html;
+  window.print();
+}
+
+renderPkgPills();
+renderRatesEditor();
+initDefaultsToForm();
+render();
+</script>
+</body>
+</html>
